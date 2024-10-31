@@ -102,6 +102,8 @@ function envm {
     mkdir -p $ENV_HOME/config/local/$2/
   elif [ "jump" = "$1" ]; then
     cd $ENV_HOME/config/local/$2/
+  elif [ "info" = "$1" ]; then
+    echo "You are using environemnt:" $ENV_ALIAS
   else
     echo "jump, add, list, use and del are available commands"
   fi
@@ -113,4 +115,5 @@ function rezsh {
   elif [ "/bin/bash" = $SHELL ]; then
     source ~/.bashrc
   fi
+  envm info
 }

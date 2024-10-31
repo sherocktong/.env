@@ -16,7 +16,7 @@ function source_files() {
   ls $LOCATION/config/local/*.* 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$1
   if [ ! -z $ENV_ALIAS ]; then
     ls $LOCATION/config/local/$ENV_ALIAS/*.* 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$1
-    echo "echo "Environment Using: $ENV_ALIAS"" >> ~/$1
+    echo "export ENV_ALIAS="$ENV_ALIAS"" >> ~/$1
   fi
   touch ~/$1
 }
