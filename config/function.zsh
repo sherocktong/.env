@@ -86,7 +86,13 @@ function brew_prefix {
 
 function envm {
   if [ "list" = "$1" ]; then
-    ls -d $ENV_HOME/config/local/*/ | xargs -n 1 basename
+    for file in $(ls -d $ENV_HOME/config/local/*/); do
+      local file_name=$(basename $file)
+      if [[ "_put_alias_here" == $file_name ]]; then
+        continue
+      fi
+      echo $(basename $file)
+    done
   elif [ "del" = "$1" ]; then
     rm -rf $ENV_HOME/config/local/$2/
   elif [ "use" = "$1" ]; then

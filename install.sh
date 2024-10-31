@@ -21,6 +21,10 @@ function source_files() {
   touch ~/$1
 }
 
+if [[ ! -d $LOCATION/config/local/_put_alias_here/ ]]; then
+  mkdir -p $LOCATION/config/local/_put_alias_here/
+fi
+
 if [[ "/bin/zsh" == "$SHELL" ]]; then
   echo "Shell is running on ZSH"
   source_files .zshrc
