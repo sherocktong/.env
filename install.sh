@@ -24,12 +24,12 @@ function source_files() {
 if [[ "/bin/zsh" == "$SHELL" ]]; then
   echo "Shell is running on ZSH"
   source_files .zshrc
-elif [[ -f ~/.bash_profile ]]; then
-  echo "Shell is running on BASH"
-  source_files .bash_profile
 elif [[ -f ~/.bashrc ]]; then
   echo "Shell is running on BASH"
   source_files .bashrc 
+elif [[ -f ~/.bash_profile ]]; then
+  echo "Shell is running on BASH PROFILE"
+  source_files .bash_profile
 else
   echo "No zsh or bash configuration files found."
 fi
