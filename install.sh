@@ -21,11 +21,14 @@ function source_files() {
   touch ~/$1
 }
 
-if [ "/bin/zsh" = "$SHELL" ]; then
+if [[ "/bin/zsh" == "$SHELL" ]]; then
+  echo "Shell is running on ZSH"
   source_files .zshrc
-elif [ -f ~/.bash_profile ]; then
+elif [[ -f ~/.bash_profile ]]; then
+  echo "Shell is running on BASH"
   source_files .bash_profile
-elif [ -f ~/.bashrc ]; then
+elif [[ -f ~/.bashrc ]]; then
+  echo "Shell is running on BASH"
   source_files .bashrc 
 else
   echo "No zsh or bash configuration files found."
