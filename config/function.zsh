@@ -1,90 +1,98 @@
-function fetch_to_clipboard() {
-    local file=$1
-    local start_line=$2
-    local end_line=$3
-
-    if [[ -z $end_line ]]; then
-        sed -n "${start_line}p" "$file" | pbcopy
-    else
-        sed -n "${start_line},${end_line}p" "$file" | pbcopy
-    fi
+function rezsh {
+  if [ "/bin/zsh" = $SHELL ]; then
+    source ~/.zshrc
+  elif [ "/bin/bash" = $SHELL ]; then
+    source ~/.bashrc
+  fi
+  envm info
 }
 
-function determine() {
-    # Get the list of tokens from the parameter
-    # IFS=','
+function refresh_env() {
+  if [ -f ~/.env_snapshot ]; then
+    env > ~/.env_latest
 
-    echo "Start searching file: $1"
-    # Check if the file exists
-    if [ -f $1 ]; then
-      # Loop through each token and check if it exists in the file
-      while read -r token; do
-        count=$(grep -c "$token" "$1")
-        if [ "$count" -gt 0 ]; then
-          echo "$token exists $count times in $1."
-          grep -n "$token" "$1"
+    # Process current environment
+    while IFS='=' read -r env_name env_value; do
+      matched="false"
+
+      # Compare with snapshot
+      while IFS='=' read -r name_snapshot value_snapshot; do
+        if [ "$env_name" = "$name_snapshot" ]; then
+          matched="true"
+          if [ "$env_value" != "$value_snapshot" ]; then
+            export "$env_name"="$value_snapshot"
+          fi
         fi
-      done <<< "$(echo "$GREP_TOKENS" | tr ' ' '\n')"
-    else
-        echo "$1 NOT existing."
-    fi
+      done < ~/.env_snapshot
+
+      # Unset if not in the snapshot
+      if [ "$matched" = "false" ]; then
+        unset "$env_name"
+      fi
+    done < ~/.env_latest
+
+    # Clean up
+    rm ~/.env_latest
+    rm ~/.env_snapshot
+  fi
 }
 
-function split_by() {
-    index=$3
-    to_index=$(($4 + 1))
-    token=""
-    while [ $index -lt $to_index ]; do
-        token+=$(echo "$1" | cut -d "$2" -f $index)"/"
-        index=$((index + 1))
-    done
-    echo $token
-}
+function refresh_alias() {
+  if [ -f ~/.alias_snapshot ]; then
+    alias > ~/.alias_latest
 
-function decompress_jars() {
-    if [ -z "$1" ]; then
-        echo "Usage: decompress_jars <directory>"
-        return 1
-    fi
+    # Process current environment
+    while IFS='=' read -r env_name env_value; do
+      matched="false"
 
-    decompress $1 jar
-}
-
-function decompress() {
-    if [ -z "$1" ]; then
-        echo "Usage: decompress <directory> <extension>"
-        return 1
-    fi
-
-    local dir="$1"
-
-    for jar_file in $(find $dir -type f -name "*.$2"); do
-        local jar_dir=$(dirname "$jar_file")
-        local jar_name=$(basename "$jar_file")
-        local temp_dir="$jar_dir/$jar_name.temp"
-
-        # Create a temporary directory
-        mkdir -p "$temp_dir"
-
-        if [ "$2" = "gz" ]; then
-          gunzip -fk $jar_file
-        else 
-          # Extract the JAR contents to the temporary directory
-          unzip -oq $jar_file -d $temp_dir 
-          # jar xf "$jar_file" -c "$temp_dir"
+      # Compare with snapshot
+      while IFS='=' read -r name_snapshot value_snapshot; do
+        if [ "$env_name" = "$name_snapshot" ]; then
+          matched="true"
+          if [ "$env_value" != "$value_snapshot" ]; then
+            export "$env_name"="$value_snapshot"
+          fi
         fi
-    done
+      done < ~/.alias_snapshot
+
+      # Unset if not in the snapshot
+      if [ "$matched" = "false" ]; then
+        unalias "$env_name"
+      fi
+    done < ~/.alias_latest
+
+    # Clean up
+    rm ~/.alias_latest
+    rm ~/.alias_snapshot
+  fi
 }
 
-function set_tunnel() {
-    ssh -v $7 -Ni ~/.ssh/$1 -L $6:$4:$5 $2@$3
-}
-
-function brew_prefix {
-  echo $(brew --prefix $1)
+function env_uninstall() {
+  local file_name=""
+  if [ -f ~/.zshrc.bak ]; then
+     file_name=".zshrc"
+  elif [ -f ~/.bashrc.bak ]; then
+    file_name=".bashrc"
+  elif [ -f ~/.bash_profile.bak ]; then
+    file_name=".bash_profile"
+  else
+    echo "No existing zsh or bash configuration files found."
+    return
+  fi
+  if [ -f ~/$file_name.bak ]; then
+    mv ~/$file_name.bak ~/$file_name
+  fi
+  touch ~/$file_name
+  source ~/$file_name
+  refresh_alias
+  refresh_env
 }
 
 function envm {
+  if [ -z $ENV_HOME ]; then
+    echo "ENV_HOME is not set"
+    exit 1
+  fi
   if [ "list" = "$1" ]; then
     for file in $(ls -d $ENV_HOME/config/local/*/); do
       local file_name=$(basename $file)
@@ -96,7 +104,8 @@ function envm {
   elif [ "del" = "$1" ]; then
     rm -rf $ENV_HOME/config/local/$2/
   elif [ "use" = "$1" ]; then
-    $ENV_HOME/switch.sh $2
+    env_uninstall 
+    $ENV_HOME/install.sh $2
     rezsh
   elif [ "add" = "$1" ]; then
     mkdir -p $ENV_HOME/config/local/$2/
@@ -104,16 +113,11 @@ function envm {
     cd $ENV_HOME/config/local/$2/
   elif [ "info" = "$1" ]; then
     echo "You are using environemnt:" $ENV_ALIAS
+  elif [ "ls" = "$1" ]; then
+    ls -f $ENV_HOME/config/local/$2/*
+  elif [ "share" = "$1" ]; then
+    ln -s $ENV_HOME/config/local/$3/$2 $ENV_HOME/config/local/$4/_$2
   else
-    echo "jump, add, list, use and del are available commands"
+    echo "share, jump, add, ls, list, use and del are available commands"
   fi
-}
-
-function rezsh {
-  if [ "/bin/zsh" = $SHELL ]; then
-    source ~/.zshrc
-  elif [ "/bin/bash" = $SHELL ]; then
-    source ~/.bashrc
-  fi
-  envm info
 }
