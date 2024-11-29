@@ -4,7 +4,6 @@ function rezsh {
   elif [ "/bin/bash" = $SHELL ]; then
     source ~/.bashrc
   fi
-  envm info
 }
 
 function refresh_env() {
@@ -112,7 +111,12 @@ function envm {
   elif [ "jump" = "$1" ]; then
     cd $ENV_HOME/config/local/$2/
   elif [ "info" = "$1" ]; then
-    echo "You are using environemnt:" $ENV_ALIAS
+    if [ -z $ENV_ALIAS ]; then
+      echo "You are using default environment"
+    else
+      echo "You are using default environment"
+    fi
+    echo "You are using environment " $ENV_ALIAS
   elif [ "ls" = "$1" ]; then
     ls -f $ENV_HOME/config/local/$2/*
   elif [ "share" = "$1" ]; then
