@@ -22,6 +22,11 @@ function source_files() {
     ls $LOCATION/config/local/$ENV_ALIAS/*.* 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$1
     echo "export ENV_ALIAS="$ENV_ALIAS"" >> ~/$1
   fi
+  if [ ! -z $ENV_ALIAS ]; then
+    echo "echo "You are using environment "$ENV_ALIAS" >> ~/$1
+  else
+    echo "echo "You are using default environment"" >> ~/$1
+  fi
 }
 
 if [[ ! -d $LOCATION/config/local/_put_alias_here/ ]]; then

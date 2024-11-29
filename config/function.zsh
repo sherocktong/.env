@@ -114,9 +114,8 @@ function envm {
     if [ -z $ENV_ALIAS ]; then
       echo "You are using default environment"
     else
-      echo "You are using default environment"
+      echo "You are using environment " $ENV_ALIAS
     fi
-    echo "You are using environment " $ENV_ALIAS
   elif [ "ls" = "$1" ]; then
     ls -f $ENV_HOME/config/local/$2/*
   elif [ "share" = "$1" ]; then
