@@ -8,6 +8,7 @@ fi
 ENV_ALIAS=$1
 
 function source_files() {
+  source $LOCATION/config/function.zsh
   if [ -f ~/$1.bak ]; then
     mv ~/$1.bak ~/$1
   fi
@@ -17,12 +18,20 @@ function source_files() {
   env > ~/.env_snapshot
   alias > ~/.alias_snapshot
   ls $LOCATION/config/*.* | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$1
-  ls $LOCATION/config/local/*.* 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$1
-  if [ ! -z $ENV_ALIAS ]; then
-    ls $LOCATION/config/local/$ENV_ALIAS/*.* 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$1
-    echo "export ENV_ALIAS="$ENV_ALIAS"" >> ~/$1
+  echo "set -o vi" >> ~/$1
+  echo "refresh_alias" >> ~/$1
+  echo "refresh_env" >> ~/$1
+  ls $LOCATION/config/local/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$1
+  if [ -f $LOCATION/config/local/hosts ]; then
+    env_add_hosts $LOCATION/config/local/hosts
   fi
+  echo "export ENV_HOME="$LOCATION"" >> ~/$1
   if [ ! -z $ENV_ALIAS ]; then
+    ls $LOCATION/config/local/$ENV_ALIAS/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$1
+    if [ -f $LOCATION/config/local/$ENV_ALIAS/hosts ]; then
+      env_add_hosts $LOCATION/config/local/$ENV_ALIAS/hosts
+    fi
+    echo "export ENV_ALIAS="$ENV_ALIAS"" >> ~/$1
     echo "echo "You are using environment "$ENV_ALIAS" >> ~/$1
   else
     echo "echo "You are using default environment"" >> ~/$1

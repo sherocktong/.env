@@ -32,7 +32,6 @@ function refresh_env() {
 
     # Clean up
     rm ~/.env_latest
-    rm ~/.env_snapshot
   fi
 }
 
@@ -62,7 +61,6 @@ function refresh_alias() {
 
     # Clean up
     rm ~/.alias_latest
-    rm ~/.alias_snapshot
   fi
 }
 
@@ -84,7 +82,31 @@ function env_uninstall() {
   touch ~/$file_name
   source ~/$file_name
   refresh_alias
+  rm -f ~/.alias_snapshot
   refresh_env
+  rm -f ~/.env_snapshot
+  env_remove_hosts
+}
+
+function env_add_hosts() {
+  local file_name=$1
+  local section=$(sed -n '/# ENVM_SECTION_START/,/# ENVM_SECTION_END/p' /etc/hosts)
+  if [ -z "$section" ]; then
+    echo "# ENVM_SECTION_START\n# ENVM_SECTION_END" | sudo tee -a /etc/hosts > /dev/null
+  fi
+  while IFS= read -r host; do
+    sudo sed -i '' "/# ENVM_SECTION_END/i\\
+    $host\\
+    " /etc/hosts
+  done < "$file_name"
+  sudo sed -i '' 's/# ENVM_SECTION_END/\n# ENVM_SECTION_END/' /etc/hosts
+}
+
+function env_remove_hosts() {
+  local section=$(sed -n '/# ENVM_SECTION_START/,/# ENVM_SECTION_END/p' /etc/hosts)
+  if [ ! -z "$section" ]; then
+    sudo sed -i '' '/# ENVM_SECTION_START/,/# ENVM_SECTION_END/d' /etc/hosts
+  fi
 }
 
 function envm {
