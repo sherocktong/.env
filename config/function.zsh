@@ -77,7 +77,8 @@ function env_uninstall() {
     return
   fi
   if [ ! -z $ENV_ALIAS ]; then
-    if declare -F private_uninstall > /dev/null; then
+    if type private_uninstall > /dev/null 2>&1; then
+      echo "Executing private uninstallation"
       private_uninstall
     fi
   fi
