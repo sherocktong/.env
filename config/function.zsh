@@ -76,6 +76,11 @@ function env_uninstall() {
     echo "No existing zsh or bash configuration files found."
     return
   fi
+  if [ ! -z $ENV_ALIAS ]; then
+    if declare -F private_uninstall > /dev/null; then
+      private_uninstall
+    fi
+  fi
   if [ -f ~/$file_name.bak ]; then
     mv ~/$file_name.bak ~/$file_name
   fi
