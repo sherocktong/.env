@@ -80,6 +80,7 @@ function env_uninstall() {
     if type private_uninstall > /dev/null 2>&1; then
       echo "Executing private uninstallation"
       private_uninstall
+      unset private_uninstall
     fi
   fi
   if [ -f ~/$file_name.bak ]; then
@@ -142,7 +143,7 @@ function envm {
     if [ -z $ENV_ALIAS ]; then
       echo "You are using default environment"
     else
-      echo "You are using environment " $ENV_ALIAS
+      echo "You are using environment "$ENV_ALIAS
     fi
   elif [ "ls" = "$1" ]; then
     ls -f $ENV_HOME/config/local/$2/*

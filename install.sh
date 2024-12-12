@@ -34,9 +34,11 @@ function source_files() {
     echo "export ENV_ALIAS="$ENV_ALIAS"" >> ~/$1
     echo "echo "You are using environment "$ENV_ALIAS" >> ~/$1
     [ -f $LOCATION/config/local/$ENV_ALIAS/function.zsh ] && source $LOCATION/config/local/$ENV_ALIAS/function.zsh
+    [ -f $LOCATION/config/local/$ENV_ALIAS/_function.zsh ] && source $LOCATION/config/local/$ENV_ALIAS/_function.zsh
     if type private_install > /dev/null 2>&1; then
       echo "Executing private installation"
       private_install
+      unset private_install
     fi
   else
     echo "echo "You are using default environment"" >> ~/$1
