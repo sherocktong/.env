@@ -22,6 +22,12 @@ function source_files() {
   echo "refresh_alias" >> ~/$1
   echo "refresh_env" >> ~/$1
   ls $LOCATION/config/local/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$1
+  [ -f $LOCATION/config/local/function.zsh ] && source $LOCATION/config/local/function.zsh
+  if type private_install > /dev/null 2>&1; then
+    echo "Executing default private installation"
+    private_install
+    unset private_install
+  fi
   if [ -f $LOCATION/config/local/hosts ]; then
     env_add_hosts $LOCATION/config/local/hosts
   fi
@@ -40,6 +46,7 @@ function source_files() {
       private_install
       unset private_install
     fi
+    echo "export SUBENV_HOME="$LOCATION/config/local/$ENV_ALIAS"" >> ~/$1
   else
     echo "echo "You are using default environment"" >> ~/$1
   fi

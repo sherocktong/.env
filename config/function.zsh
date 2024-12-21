@@ -153,3 +153,17 @@ function envm {
     echo "share, jump, add, ls, list, use and del are available commands"
   fi
 }
+
+function hint() {
+  if [ ! -z $ENV_HOME ]; then
+    if [ -f $ENV_HOME/config/local/hint ]; then
+      cat $ENV_HOME/config/local/hint
+    fi
+  fi
+
+  if [ ! -z $ENV_ALIAS ]; then
+    if [ -f $ENV_HOME/config/local/$ENV_ALIAS/hint ]; then
+      cat $ENV_HOME/config/local/$ENV_ALIAS/hint
+    fi
+  fi
+}
