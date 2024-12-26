@@ -76,7 +76,12 @@ function env_uninstall() {
     echo "No existing zsh or bash configuration files found."
     return
   fi
+  if type private_uninstall > /dev/null 2>&1; then
+    unset -f private_uninstall
+  fi
   if [ ! -z $ENV_ALIAS ]; then
+    [ -f $ENV_HOME/config/local/$ENV_ALIAS/function.zsh ] && source $ENV_HOME/config/local/$ENV_ALIAS/function.zsh
+    [ -f $ENV_HOME/config/local/$ENV_ALIAS/_function.zsh ] && source $ENV_HOME/config/local/$ENV_ALIAS/_function.zsh
     if type private_uninstall > /dev/null 2>&1; then
       echo "Executing private uninstallation"
       private_uninstall
@@ -84,7 +89,7 @@ function env_uninstall() {
     fi
   fi
 
-  [ -f $LOCATION/config/local/function.zsh ] && source $LOCATION/config/local/function.zsh
+  [ -f $ENV_HOME/config/local/function.zsh ] && source $ENV_HOME/config/local/function.zsh
   if type private_uninstall > /dev/null 2>&1; then
     echo "Executing default private uninstallation"
     private_uninstall
