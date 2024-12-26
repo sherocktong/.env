@@ -83,6 +83,13 @@ function env_uninstall() {
       unset private_uninstall
     fi
   fi
+
+  [ -f $LOCATION/config/local/function.zsh ] && source $LOCATION/config/local/function.zsh
+  if type private_uninstall > /dev/null 2>&1; then
+    echo "Executing default private uninstallation"
+    private_uninstall
+    unset private_uninstall
+  fi
   if [ -f ~/$file_name.bak ]; then
     mv ~/$file_name.bak ~/$file_name
   fi
