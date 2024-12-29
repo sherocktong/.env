@@ -158,7 +158,7 @@ function envm {
       echo "You are using environment "$ENV_ALIAS
     fi
   elif [ "ls" = "$1" ]; then
-    ls -f $ENV_HOME/config/local/$2/*
+    ls -alfG $ENV_HOME/config/local/$2/*
   elif [ "share" = "$1" ]; then
     ln -s $ENV_HOME/config/local/$3/$2 $ENV_HOME/config/local/$4/_$2
   else
