@@ -89,7 +89,7 @@ function env_uninstall() {
     fi
   fi
 
-  [ -f $ENV_HOME/config/local/function.zsh ] && source $ENV_HOME/config/local/function.zsh
+  [ -f $ENV_HOME/config/local/.default/function.zsh ] && source $ENV_HOME/config/local/.default/function.zsh
   if type private_uninstall > /dev/null 2>&1; then
     echo "Executing default private uninstallation"
     private_uninstall
@@ -168,8 +168,8 @@ function envm {
 
 function hint() {
   if [ ! -z $ENV_HOME ]; then
-    if [ -f $ENV_HOME/config/local/hint ]; then
-      cat $ENV_HOME/config/local/hint
+    if [ -f $ENV_HOME/config/local/.default/hint ]; then
+      cat $ENV_HOME/config/local/.default/hint
     fi
   fi
 
@@ -178,4 +178,60 @@ function hint() {
       cat $ENV_HOME/config/local/$ENV_ALIAS/hint
     fi
   fi
+}
+
+function ghx() {
+  local workspace=""
+  local url="https://github.com/"
+
+  if [ ! -z $GHX_DISABLED ] && [[ 1 -eq $GHX_DISABLED ]]; then
+    echo "GHX is disabled"
+    return 1
+  fi
+  if [ ! -z $GHX_URL ]; then
+    url=$GHX_URL
+  fi
+  if [ -z $ENV_ALIAS ]; then 
+    if [ -z $X ]; then
+      echo "Please set environment variable X to use this function"
+      return 1
+    else
+      workspace=$X
+    fi 
+  else
+    if [ -z $WORKSPACE ]; then
+      echo "Please set environment variable WORKSPACE to use this function"
+      return 1
+    else
+      workspace=$WORKSPACE
+    fi
+  fi 
+  if [ ! -f $workspace/.ghrc ]; then
+    echo "Please create a .ghrc file under the root directory of workspace"
+    return 1
+  fi
+  if [ "install" = "$1" ]; then
+    while IFS='/' read -r user repo; do
+      if [ 0 -eq $(ls -1 $workspace | grep -c $repo) ]; then
+        cd $workspace
+        git clone $url$user/$repo.git
+        cd - > /dev/null 2>&1
+      fi
+    done < $workspace/.ghrc
+  elif [ "clean" = "$1" ]; then
+    ls -1 $workspace | while read -r line; do
+      if [ 0 -eq $(grep -c $line $workspace/.ghrc) ]; then
+        echo "Removing repository $line..."
+        rm -rf $workspace/$line
+      else
+        local existing=$(grep $line $workspace/.ghrc | cut -d '/' -f 2)
+        if [ "$existing" != "$line" ]; then
+          echo "Removing repository $line..."
+          rm -rf $workspace/$line
+        fi
+      fi
+    done 
+  else
+    echo "Only install and clean are available commands"
+  fi 
 }

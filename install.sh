@@ -21,17 +21,18 @@ function source_files() {
   echo "set -o vi" >> ~/$1
   echo "refresh_alias" >> ~/$1
   echo "refresh_env" >> ~/$1
-  ls $LOCATION/config/local/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$1
-  [ -f $LOCATION/config/local/function.zsh ] && source $LOCATION/config/local/function.zsh
+  ls $LOCATION/config/local/.default/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$1
+  [ -f $LOCATION/config/local/.default/function.zsh ] && source $LOCATION/config/local/.default/function.zsh
   if type private_install > /dev/null 2>&1; then
     echo "Executing default private installation"
     private_install
     unset private_install
   fi
-  if [ -f $LOCATION/config/local/hosts ]; then
-    env_add_hosts $LOCATION/config/local/hosts
+  if [ -f $LOCATION/config/local/.default/hosts ]; then
+    env_add_hosts $LOCATION/config/local/.default/hosts
   fi
   echo "export ENV_HOME="$LOCATION"" >> ~/$1
+  echo "export DEFAULT_ENV_HOME="$LOCATION/config/local/.default"" >> ~/$1
   if [ ! -z $ENV_ALIAS ]; then
     ls $LOCATION/config/local/$ENV_ALIAS/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$1
     if [ -f $LOCATION/config/local/$ENV_ALIAS/hosts ]; then
