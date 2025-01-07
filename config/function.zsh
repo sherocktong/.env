@@ -65,6 +65,8 @@ function refresh_alias() {
 }
 
 function env_uninstall() {
+  source $ENV_HOME/config/add-on.zsh
+  
   local file_name=""
   if [ -f ~/.zshrc.bak ]; then
      file_name=".zshrc"
@@ -104,28 +106,9 @@ function env_uninstall() {
   rm -f ~/.alias_snapshot
   refresh_env
   rm -f ~/.env_snapshot
-  env_remove_hosts
-}
-
-function env_add_hosts() {
-  local file_name=$1
-  local section=$(sed -n '/# ENVM_SECTION_START/,/# ENVM_SECTION_END/p' /etc/hosts)
-  if [ -z "$section" ]; then
-    echo "# ENVM_SECTION_START\n# ENVM_SECTION_END" | sudo tee -a /etc/hosts > /dev/null
-  fi
-  while IFS= read -r host; do
-    sudo sed -i '' "/# ENVM_SECTION_END/i\\
-    $host\\
-    " /etc/hosts
-  done < "$file_name"
-  sudo sed -i '' 's/# ENVM_SECTION_END/\n# ENVM_SECTION_END/' /etc/hosts
-}
-
-function env_remove_hosts() {
-  local section=$(sed -n '/# ENVM_SECTION_START/,/# ENVM_SECTION_END/p' /etc/hosts)
-  if [ ! -z "$section" ]; then
-    sudo sed -i '' '/# ENVM_SECTION_START/,/# ENVM_SECTION_END/d' /etc/hosts
-  fi
+  __hosts_uninstall
+  __dnsmasq_uninstall
+  __resolver_uninstall
 }
 
 function envm {
@@ -161,8 +144,14 @@ function envm {
     ls -alfG $ENV_HOME/config/local/$2/*
   elif [ "share" = "$1" ]; then
     ln -s $ENV_HOME/config/local/$3/$2 $ENV_HOME/config/local/$4/_$2
+  elif [ "link" = "$1" ]; then
+    if [ -z $X ]; then
+      echo "Please set environment variable X to use this function"
+      return 1
+    fi
+    ln -s $X/$2 $ENV_HOME/config/local/$3
   else
-    echo "share, jump, add, ls, list, use and del are available commands"
+    echo "share, jump, add, ls, list, use, link and del are available commands"
   fi
 }
 

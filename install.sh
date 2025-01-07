@@ -9,6 +9,7 @@ ENV_ALIAS=$1
 
 function source_files() {
   source $LOCATION/config/function.zsh
+  source $LOCATION/config/add-on.zsh
   if [ -f ~/$1.bak ]; then
     mv ~/$1.bak ~/$1
   fi
@@ -28,16 +29,13 @@ function source_files() {
     private_install
     unset private_install
   fi
-  if [ -f $LOCATION/config/local/.default/hosts ]; then
-    env_add_hosts $LOCATION/config/local/.default/hosts
-  fi
   echo "export ENV_HOME="$LOCATION"" >> ~/$1
   echo "export DEFAULT_ENV_HOME="$LOCATION/config/local/.default"" >> ~/$1
   if [ ! -z $ENV_ALIAS ]; then
     ls $LOCATION/config/local/$ENV_ALIAS/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$1
-    if [ -f $LOCATION/config/local/$ENV_ALIAS/hosts ]; then
-      env_add_hosts $LOCATION/config/local/$ENV_ALIAS/hosts
-    fi
+    __hosts_install $LOCATION/config/local/$ENV_ALIAS
+    __dnsmasq_install $LOCATION/config/local/$ENV_ALIAS
+    __resolver_install $LOCATION/config/local/$ENV_ALIAS
     echo "export ENV_ALIAS="$ENV_ALIAS"" >> ~/$1
     echo "echo "You are using environment "$ENV_ALIAS" >> ~/$1
     [ -f $LOCATION/config/local/$ENV_ALIAS/function.zsh ] && source $LOCATION/config/local/$ENV_ALIAS/function.zsh
