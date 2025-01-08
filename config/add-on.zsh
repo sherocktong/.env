@@ -58,6 +58,9 @@ function __resolver_install() {
 
 function __resolver_uninstall() {
   if [ -d /etc/resolver ]; then
-    ls -1 /etc/resolver | xargs sudo rm -f
+    local files=$(ls -1 /etc/resolver)
+    for file in $files; do
+      sudo rm -rf /etc/resolver/$file
+    done
   fi
 }
