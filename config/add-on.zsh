@@ -10,7 +10,8 @@ function __hosts_install() {
   fi
   while IFS= read -r host; do
     sudo sed -i '' "/# ENVM_SECTION_END/i\\
-$host" /etc/hosts
+$host\\
+" /etc/hosts
   done < "$file_name"
   sudo sed -i '' 's/# ENVM_SECTION_END/\n# ENVM_SECTION_END/' /etc/hosts
 }
