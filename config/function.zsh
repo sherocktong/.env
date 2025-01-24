@@ -201,23 +201,45 @@ function ghx() {
   fi
   if [ "install" = "$1" ]; then
     while IFS='/' read -r user repo; do
+    local install_flag=0
       if [ 0 -eq $(ls -1 $workspace | grep -c $repo) ]; then
+        install_flag=1
+      else
+        local existing=$(ls -1 $workspace | grep $repo)
+        echo $existing | while read -r existing_line; do
+          if [ "$existing_line" = "$repo" ]; then
+            install_flag=0
+            break
+          else
+            install_flag=1
+          fi
+        done
+      fi
+      if [ 1 -eq $install_flag ]; then
         cd $workspace
         git clone $url$user/$repo.git
         cd - > /dev/null 2>&1
       fi
     done < $workspace/.ghrc
   elif [ "clean" = "$1" ]; then
+    local delete_flag=0
     ls -1 $workspace | while read -r line; do
       if [ 0 -eq $(grep -c $line $workspace/.ghrc) ]; then
-        echo "Removing repository $line..."
-        rm -rf $workspace/$line
+        delete_flag=1
       else
         local existing=$(grep $line $workspace/.ghrc | cut -d '/' -f 2)
-        if [ "$existing" != "$line" ]; then
-          echo "Removing repository $line..."
-          rm -rf $workspace/$line
-        fi
+        echo $existing | while read -r existing_line; do
+          if [ "$existing_line" = "$line" ]; then
+            delete_flag=0
+            break
+          else
+            delete_flag=1
+          fi
+        done
+      fi
+      if [ 1 -eq $delete_flag ]; then
+        echo "Removing repository $line..."
+        rm -rf $line
       fi
     done 
   else
