@@ -1,4 +1,4 @@
-function rezsh {
+rezsh() {
   if [ "/bin/zsh" = $SHELL ]; then
     source ~/.zshrc
   elif [ "/bin/bash" = $SHELL ]; then
@@ -6,7 +6,7 @@ function rezsh {
   fi
 }
 
-function refresh_env() {
+refresh_env() {
   if [ -f ~/.env_snapshot ]; then
     env > ~/.env_latest
 
@@ -35,7 +35,7 @@ function refresh_env() {
   fi
 }
 
-function refresh_alias() {
+refresh_alias() {
   if [ -f ~/.alias_snapshot ]; then
     alias > ~/.alias_latest
 
@@ -64,7 +64,7 @@ function refresh_alias() {
   fi
 }
 
-function env_uninstall() {
+env_uninstall() {
   source $ENV_HOME/config/add-on.zsh
   
   local file_name=""
@@ -111,7 +111,7 @@ function env_uninstall() {
   __resolver_uninstall
 }
 
-function envm {
+envm() {
   if [ -z $ENV_HOME ]; then
     echo "ENV_HOME is not set"
     exit 1
@@ -155,7 +155,7 @@ function envm {
   fi
 }
 
-function hint() {
+hint() {
   if [ ! -z $ENV_HOME ]; then
     if [ -f $ENV_HOME/config/local/.default/hint ]; then
       cat $ENV_HOME/config/local/.default/hint
@@ -169,7 +169,7 @@ function hint() {
   fi
 }
 
-function ghx() {
+ghx() {
   local workspace=""
   local url="https://github.com/"
 

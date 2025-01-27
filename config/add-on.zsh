@@ -1,4 +1,4 @@
-function __hosts_install() {
+__hosts_install() {
   local file_name=$1/hosts
   if [ ! -f $file_name ]; then
     return
@@ -16,14 +16,14 @@ $host\\
   sudo sed -i '' 's/# ENVM_SECTION_END/\n# ENVM_SECTION_END/' /etc/hosts
 }
 
-function __hosts_uninstall() {
+__hosts_uninstall() {
   local section=$(sed -n '/# ENVM_SECTION_START/,/# ENVM_SECTION_END/p' /etc/hosts)
   if [ ! -z "$section" ]; then
     sudo sed -i '' '/# ENVM_SECTION_START/,/# ENVM_SECTION_END/d' /etc/hosts
   fi
 }
 
-function __dnsmasq_install() {
+__dnsmasq_install() {
   local file_name=$1/dnsmasq
   if [ ! -f $file_name ]; then
     return
@@ -40,14 +40,14 @@ $host" $(brew --prefix)/etc/dnsmasq.conf
   sed -i '' 's/# ENVM_SECTION_END/\n# ENVM_SECTION_END/' $(brew --prefix)/etc/dnsmasq.conf
 }
 
-function __dnsmasq_uninstall() {
+__dnsmasq_uninstall() {
   local section=$(sed -n '/# ENVM_SECTION_START/,/# ENVM_SECTION_END/p' $(brew --prefix)/etc/dnsmasq.conf)
   if [ ! -z "$section" ]; then
     sed -i '' '/# ENVM_SECTION_START/,/# ENVM_SECTION_END/d' $(brew --prefix)/etc/dnsmasq.conf
   fi
 }
 
-function __resolver_install() {
+__resolver_install() {
   local file_name=$1/resolver
   if [ ! -f $file_name ]; then
     return
@@ -57,7 +57,7 @@ function __resolver_install() {
   done < "$file_name"
 }
 
-function __resolver_uninstall() {
+__resolver_uninstall() {
   if [ -d /etc/resolver ]; then
     local files=$(ls -1 /etc/resolver)
     for file in $files; do
