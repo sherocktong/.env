@@ -7,7 +7,7 @@ else
 fi
 ENV_ALIAS=$1
 
-function source_files() {
+source_files() {
   source $LOCATION/config/function.zsh
   source $LOCATION/config/add-on.zsh
   if [ -f ~/$1.bak ]; then
