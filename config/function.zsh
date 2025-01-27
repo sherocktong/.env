@@ -66,8 +66,6 @@ refresh_alias() {
 }
 
 env_uninstall() {
-  source $ENV_HOME/config/add-on.zsh
-  
   local file_name=""
   if [ -f ~/.zshrc.bak ]; then
      file_name=".zshrc"
@@ -93,6 +91,7 @@ env_uninstall() {
   fi
 
   [ -f $ENV_HOME/config/local/.default/function.zsh ] && source $ENV_HOME/config/local/.default/function.zsh
+  [ -f $ENV_HOME/config/local/.default/addon.zsh ] && source $ENV_HOME/config/local/.default/addon.zsh
   if type private_uninstall > /dev/null 2>&1; then
     echo "Executing default private uninstallation"
     private_uninstall
@@ -107,9 +106,15 @@ env_uninstall() {
   rm -f ~/.alias_snapshot
   refresh_env
   rm -f ~/.env_snapshot
-  __hosts_uninstall
-  __dnsmasq_uninstall
-  __resolver_uninstall
+  __addon_uninstall
+}
+
+__addon_uninstall() {
+  return
+}
+
+__addon_install() {
+  return
 }
 
 envm() {

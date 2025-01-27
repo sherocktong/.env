@@ -9,7 +9,6 @@ ENV_ALIAS=$1
 
 source_files() {
   source $LOCATION/config/function.zsh
-  source $LOCATION/config/add-on.zsh
   if [ -f ~/$1.bak ]; then
     mv ~/$1.bak ~/$1
   fi
@@ -33,9 +32,10 @@ source_files() {
   echo "export DEFAULT_ENV_HOME="$LOCATION/config/local/.default"" >> ~/$1
   if [ ! -z $ENV_ALIAS ]; then
     ls $LOCATION/config/local/$ENV_ALIAS/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$1
-    __hosts_install $LOCATION/config/local/$ENV_ALIAS
-    __dnsmasq_install $LOCATION/config/local/$ENV_ALIAS
-    __resolver_install $LOCATION/config/local/$ENV_ALIAS
+    if [ -f $LOCATION/config/local/.default/addon.zsh ]; then
+      source $LOCATION/config/local/.default/addon.zsh
+      __addon_install $LOCATION/config/local/$ENV_ALIAS
+    fi
     echo "export ENV_ALIAS="$ENV_ALIAS"" >> ~/$1
     echo "echo "You are using environment "$ENV_ALIAS" >> ~/$1
     [ -f $LOCATION/config/local/$ENV_ALIAS/function.zsh ] && source $LOCATION/config/local/$ENV_ALIAS/function.zsh
