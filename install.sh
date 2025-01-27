@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 if [ -z $ENV_HOME ]; then
   LOCATION=$(pwd)
   export ENV_HOME=$LOCATION
