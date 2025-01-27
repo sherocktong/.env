@@ -56,7 +56,7 @@ refresh_alias() {
 
       # Unset if not in the snapshot
       if [ "$matched" = "false" ]; then
-        unalias "$env_name"
+        unalias "$env_name" 2>/dev/null
       fi
     done < ~/.alias_latest
 
