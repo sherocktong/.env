@@ -51,17 +51,17 @@ source_files() {
   fi
 }
 
-if [[ ! -d $LOCATION/config/local/_put_alias_here/ ]]; then
+if [ ! -d $LOCATION/config/local/_put_alias_here/ ]; then
   mkdir -p $LOCATION/config/local/_put_alias_here/
 fi
 
-if [[ -f ~/.zshrc ]]; then
+if [ -f ~/.zshrc ]; then
   echo "Shell is running on ZSH"
   source_files .zshrc
-elif [[ -f ~/.bashrc ]]; then
+elif [ -f ~/.bashrc ]; then
   echo "Shell is running on BASH"
   source_files .bashrc 
-elif [[ -f ~/.bash_profile ]]; then
+elif [ -f ~/.bash_profile ]; then
   echo "Shell is running on BASH PROFILE"
   source_files .bash_profile
 else
