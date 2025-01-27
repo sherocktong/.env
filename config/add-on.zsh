@@ -1,3 +1,4 @@
+#!/bin/bash
 __hosts_install() {
   local file_name=$1/hosts
   if [ ! -f $file_name ]; then

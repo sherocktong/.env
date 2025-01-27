@@ -1,3 +1,4 @@
+#!/bin/bash
 rezsh() {
   if [ "/bin/zsh" = $SHELL ]; then
     source ~/.zshrc
