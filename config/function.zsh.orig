@@ -1,4 +1,7 @@
+<<<<<<< HEAD
+=======
 #!/bin/bash
+>>>>>>> origin/develop
 rezsh() {
   if [ "/bin/zsh" = $SHELL ]; then
     source ~/.zshrc
@@ -66,6 +69,11 @@ refresh_alias() {
 }
 
 env_uninstall() {
+<<<<<<< HEAD
+  source $ENV_HOME/config/add-on.zsh
+  
+=======
+>>>>>>> origin/develop
   local file_name=""
   if [ -f ~/.zshrc.bak ]; then
      file_name=".zshrc"
@@ -109,6 +117,8 @@ env_uninstall() {
   __addon_uninstall
 }
 
+<<<<<<< HEAD
+=======
 __addon_uninstall() {
   return
 }
@@ -117,6 +127,7 @@ __addon_install() {
   return
 }
 
+>>>>>>> origin/develop
 envm() {
   if [ -z $ENV_HOME ]; then
     echo "ENV_HOME is not set"
