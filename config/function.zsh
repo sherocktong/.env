@@ -133,6 +133,12 @@ envm() {
   elif [ "del" = "$1" ]; then
     rm -rf $ENV_HOME/config/local/$2/
   elif [ "use" = "$1" ]; then
+    if [ ! -z $2 ]; then
+      if [ ! -d $ENV_HOME/config/local/$2/ ]; then
+        echo "Environment $2 does not exist"
+        return 1
+      fi
+    fi
     env_uninstall 
     $ENV_HOME/install.sh $2
     rezsh
@@ -245,7 +251,7 @@ ghx() {
       fi
       if [ 1 -eq $delete_flag ]; then
         echo "Removing repository $line..."
-        rm -rf $line
+        rm -rf $workspace/$line
       fi
     done 
   else
