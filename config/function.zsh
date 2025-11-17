@@ -7,76 +7,49 @@ rezsh() {
   fi
 }
 
-refresh_env() {
-  if [ -f ~/.env_snapshot ]; then
-    env > ~/.env_latest
-
-    # Process current environment
-    while IFS='=' read -r env_name env_value; do
-      matched="false"
-
-      # Compare with snapshot
-      while IFS='=' read -r name_snapshot value_snapshot; do
-        if [ "$env_name" = "$name_snapshot" ]; then
-          matched="true"
-          if [ "$env_value" != "$value_snapshot" ]; then
-            export "$env_name"="$value_snapshot"
-          fi
-        fi
-      done < ~/.env_snapshot
-
-      # Unset if not in the snapshot
-      if [ "$matched" = "false" ]; then
-        unset "$env_name"
-      fi
-    done < ~/.env_latest
-
-    # Clean up
-    rm ~/.env_latest
+__print_sh_runtime() {
+  if [ $(__get_sh_runtime) = "ZSH" ]; then
+    echo "Shell is running on ZSH"
+  else 
+    echo "Shell is running on BASH"
   fi
 }
 
-refresh_alias() {
-  if [ -f ~/.alias_snapshot ]; then
-    alias > ~/.alias_latest
-
-    # Process current environment
-    while IFS='=' read -r env_name env_value; do
-      matched="false"
-
-      # Compare with snapshot
-      while IFS='=' read -r name_snapshot value_snapshot; do
-        if [ "$env_name" = "$name_snapshot" ]; then
-          matched="true"
-          if [ "$env_value" != "$value_snapshot" ]; then
-            export "$env_name"="$value_snapshot"
-          fi
-        fi
-      done < ~/.alias_snapshot
-
-      # Unset if not in the snapshot
-      if [ "$matched" = "false" ]; then
-        unalias "$env_name" 2>/dev/null
-      fi
-    done < ~/.alias_latest
-
-    # Clean up
-    rm ~/.alias_latest
-  fi
-}
-
-env_uninstall() {
-  local file_name=""
-  if [ -f ~/.zshrc.bak ]; then
-     file_name=".zshrc"
-  elif [ -f ~/.bashrc.bak ]; then
-    file_name=".bashrc"
-  elif [ -f ~/.bash_profile.bak ]; then
-    file_name=".bash_profile"
+__get_sh_config_file() {
+  local runtime=$(__get_sh_runtime)
+  if [ $runtime = "ZSH" ]; then
+    echo ".zshrc"
   else
-    echo "No existing zsh or bash configuration files found."
-    return
+    if [ -f ~/.bash_profile ]; then
+      echo ".bash_profile"
+    else
+      echo ".bashrc"
+    fi
   fi
+}
+
+__get_sh_runtime() {
+  if [ "/bin/zsh" = $SHELL ]; then
+    echo "ZSH"
+  else
+    echo "BASH"
+  fi
+}
+
+__refresh_env() {
+  local home_dir=$ENV_HOME
+  for var in $(printenv | cut -d= -f1 | grep -v -E '^(PATH|HOME|SHELL|USER|LOGNAME|TERM|PWD)$'); do
+		unset "$var"
+	done
+  export ENV_HOME=$home_dir
+}
+
+__refresh_alias() {
+  unalias -a
+}
+
+__env_uninstall() {
+  local file_name="$(__get_sh_config_file)"
   if type private_uninstall > /dev/null 2>&1; then
     unset -f private_uninstall
   fi
@@ -98,15 +71,15 @@ env_uninstall() {
     unset private_uninstall
   fi
   if [ -f ~/$file_name.bak ]; then
-    mv ~/$file_name.bak ~/$file_name
+    cp ~/$file_name.bak ~/$file_name
   fi
   touch ~/$file_name
-  source ~/$file_name
-  refresh_alias
+  __refresh_alias
   # rm -f ~/.alias_snapshot
-  refresh_env
+  __refresh_env
   # rm -f ~/.env_snapshot
   __addon_uninstall
+  source ~/$file_name
 }
 
 __addon_uninstall() {
@@ -115,6 +88,48 @@ __addon_uninstall() {
 
 __addon_install() {
   return
+}
+
+__env_install() {
+  local target_file="$(__get_sh_config_file)"
+  
+  ENV_ALIAS=$1
+  if [ -f ~/$target_file.bak ]; then
+    cp ~/$target_file.bak ~/$target_file
+  fi
+  source ~/$target_file
+  ls $ENV_HOME/config/*.* | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$target_file
+  echo "set -o vi" >> ~/$target_file
+  echo "__refresh_alias" >> ~/$target_file
+  echo "__refresh_env" >> ~/$target_file
+  ls $ENV_HOME/config/local/.default/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$target_file
+  [ -f $ENV_HOME/config/local/.default/function.zsh ] && source $ENV_HOME/config/local/.default/function.zsh
+  if type private_install > /dev/null 2>&1; then
+    echo "Executing default private installation"
+    private_install
+    unset private_install
+  fi
+  echo "export ENV_HOME="$ENV_HOME"" >> ~/$target_file
+  echo "export DEFAULT_ENV_HOME="$ENV_HOME/config/local/.default"" >> ~/$target_file
+  if [ ! -z $ENV_ALIAS ]; then
+    ls $ENV_HOME/config/local/$ENV_ALIAS/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$target_file
+    if [ -f $ENV_HOME/config/local/.default/addon.zsh ]; then
+      source $ENV_HOME/config/local/.default/addon.zsh
+      __addon_install $ENV_HOME/config/local/$ENV_ALIAS
+    fi
+    echo "export ENV_ALIAS="$ENV_ALIAS"" >> ~/$target_file
+    echo "echo "You are using environment "$ENV_ALIAS" >> ~/$target_file
+    [ -f $ENV_HOME/config/local/$ENV_ALIAS/function.zsh ] && source $ENV_HOME/config/local/$ENV_ALIAS/function.zsh
+    [ -f $ENV_HOME/config/local/$ENV_ALIAS/_function.zsh ] && source $ENV_HOME/config/local/$ENV_ALIAS/_function.zsh
+    if type private_install > /dev/null 2>&1; then
+      echo "Executing private installation"
+      private_install
+      unset private_install
+    fi
+    echo "export SUBENV_HOME="$ENV_HOME/config/local/$ENV_ALIAS"" >> ~/$target_file
+  else
+    echo "echo "You are using default environment"" >> ~/$target_file
+  fi
 }
 
 envm() {
@@ -139,8 +154,8 @@ envm() {
         return 1
       fi
     fi
-    env_uninstall 
-    $ENV_HOME/install.sh $2
+    __env_uninstall 
+    __env_install $2
     rezsh
   elif [ "add" = "$1" ]; then
     mkdir -p $ENV_HOME/config/local/$2/
