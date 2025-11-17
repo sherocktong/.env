@@ -103,9 +103,9 @@ env_uninstall() {
   touch ~/$file_name
   source ~/$file_name
   refresh_alias
-  rm -f ~/.alias_snapshot
+  # rm -f ~/.alias_snapshot
   refresh_env
-  rm -f ~/.env_snapshot
+  # rm -f ~/.env_snapshot
   __addon_uninstall
 }
 
