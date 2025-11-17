@@ -15,7 +15,12 @@ source_files() {
 
   cp ~/$1 ~/$1.bak
   source ~/$1
-  env > ~/.env_snapshot
+  if [ ! -f ~/.env_snapshot ]; then
+    env > ~/.env_snapshot
+  fi
+  if [ ! -f ~/.alias_snapshot ]; then
+    env > ~/.alias_snapshot
+  fi 
   alias > ~/.alias_snapshot
   ls $LOCATION/config/*.* | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$1
   echo "set -o vi" >> ~/$1
