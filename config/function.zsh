@@ -155,7 +155,11 @@ envm() {
       fi
     fi
     __env_uninstall 
-    __env_install $2
+    if [ -z "$1" ]; then
+      __env_install "default"
+    else 
+      __env_install $2
+    fi
     rezsh
   elif [ "add" = "$1" ]; then
     mkdir -p $ENV_HOME/config/local/$2/
