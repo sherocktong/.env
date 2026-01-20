@@ -154,6 +154,11 @@ envm() {
         return 1
       fi
     fi
+    if [ -d $ENV_HOME/config/mods ]; then
+      for f in "$ENV_HOME/config/mods/"*.zsh(N); do
+        source "$f"
+      done
+    fi
     __env_uninstall 
     if [ -z "$1" ]; then
       __env_install "default"
