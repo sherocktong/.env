@@ -102,6 +102,7 @@ __env_install() {
   echo "set -o vi" >> ~/$target_file
   echo "__refresh_alias" >> ~/$target_file
   echo "__refresh_env" >> ~/$target_file
+  ls $ENV_HOME/config/mods/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$target_file
   ls $ENV_HOME/config/local/.default/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$target_file
   [ -f $ENV_HOME/config/local/.default/function.zsh ] && source $ENV_HOME/config/local/.default/function.zsh
   if type private_install > /dev/null 2>&1; then
