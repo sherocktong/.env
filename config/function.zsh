@@ -48,6 +48,11 @@ __refresh_env() {
   local var allowed keep
 
   while IFS= read -r var; do
+    if [[ "$var" == T_* ]]; then
+      unset "$var"
+      continue
+    fi
+
     keep=0
 
     while IFS= read -r allowed; do
