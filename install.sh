@@ -38,6 +38,14 @@ if [ ! -d $LOCATION/config/local/_put_alias_here/ ]; then
 fi
 __print_sh_runtime
 __backup $(__get_sh_config_file)
+
+if [ -d $ENV_HOME/config/mods ]; then
+  for f in "$ENV_HOME/config/mods/"*.zsh; do
+    [[ -e "$f" ]] || continue
+    source "$f"
+  done
+fi
+
 __env_install default
 source $ENV_HOME/config/function.zsh
 rezsh

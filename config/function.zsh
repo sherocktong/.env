@@ -37,11 +37,33 @@ __get_sh_runtime() {
 }
 
 __refresh_env() {
-  local home_dir=$ENV_HOME
-  for var in $(printenv | cut -d= -f1 | grep -v -E '^(PATH|HOME|SHELL|USER|LOGNAME|TERM|PWD)$'); do
-		unset "$var"
-	done
-  export ENV_HOME=$home_dir
+  local home_dir="$ENV_HOME"
+  local keep_file="$home_dir/config/env.whitelist"
+
+  if [[ ! -f "$keep_file" ]]; then
+    echo "Error: Env whitelist file not found: $keep_file. Please run \`cp $keep_file.template $keep_file\` to create one" >&2
+    return 1
+  fi
+
+  local var allowed keep
+
+  while IFS= read -r var; do
+    keep=0
+
+    while IFS= read -r allowed; do
+      [[ -z "$allowed" || "$allowed" == \#* ]] && continue
+
+      if [[ "$var" == *"$allowed"* ]]; then
+        keep=1
+        break
+      fi
+    done < "$keep_file"
+
+    [[ "$keep" -eq 0 ]] && unset "$var"
+
+  done < <(printenv | cut -d= -f1)
+
+  export ENV_HOME="$home_dir"
 }
 
 __refresh_alias() {
@@ -98,7 +120,7 @@ __env_install() {
     cp ~/$target_file.bak ~/$target_file
   fi
   source ~/$target_file
-  ls $ENV_HOME/config/*.* | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$target_file
+  ls $ENV_HOME/config/*.zsh | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$target_file
   echo "set -o vi" >> ~/$target_file
   echo "__refresh_alias" >> ~/$target_file
   echo "__refresh_env" >> ~/$target_file
@@ -156,7 +178,8 @@ envm() {
       fi
     fi
     if [ -d $ENV_HOME/config/mods ]; then
-      for f in "$ENV_HOME/config/mods/"*.zsh(N); do
+      for f in "$ENV_HOME/config/mods/"*.zsh; do
+        [[ -e "$f" ]] || continue
         source "$f"
       done
     fi

@@ -1,2 +1,3 @@
 config/local
 config/mods
+config/env.whitelist
