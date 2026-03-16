@@ -38,6 +38,9 @@ __get_sh_runtime() {
 
 __refresh_env() {
   local home_dir="$ENV_HOME"
+  if [ -z "$home_dir" ]; then
+    return
+  fi
   local keep_file="$home_dir/config/env.whitelist"
 
   if [[ ! -f "$keep_file" ]]; then
@@ -118,45 +121,82 @@ __addon_install() {
 }
 
 __env_install() {
-  local target_file="$(__get_sh_config_file)"
-  
-  ENV_ALIAS=$1
-  if [ -f ~/$target_file.bak ]; then
-    cp ~/$target_file.bak ~/$target_file
+  local target_file
+  target_file="$(__get_sh_config_file)"
+  local ENV_ALIAS="$1"
+
+  __append_sources() {
+    setopt local_options nonomatch 2>/dev/null
+    local dir="$1"
+    [ -d "$dir" ] || return
+
+    for f in "$dir"/*.zsh; do
+      [ -e "$f" ] || continue
+      echo "[ -f \"$f\" ] && source \"$f\"" >> ~/"$target_file"
+    done
+  }
+
+  # restore backup if exists
+  if [ -f ~/"$target_file".bak ]; then
+    cp ~/"$target_file".bak ~/"$target_file"
   fi
-  source ~/$target_file
-  ls $ENV_HOME/config/*.zsh | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$target_file
-  echo "set -o vi" >> ~/$target_file
-  echo "__refresh_alias" >> ~/$target_file
-  echo "__refresh_env" >> ~/$target_file
-  ls $ENV_HOME/config/mods/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$target_file
-  ls $ENV_HOME/config/local/.default/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$target_file
-  [ -f $ENV_HOME/config/local/.default/function.zsh ] && source $ENV_HOME/config/local/.default/function.zsh
-  if type private_install > /dev/null 2>&1; then
+
+  # load existing config
+  [ -f ~/"$target_file" ] && source ~/"$target_file"
+
+  # base configs
+  __append_sources "$ENV_HOME/config"
+
+  echo "set -o vi" >> ~/"$target_file"
+  echo "__refresh_alias" >> ~/"$target_file"
+  echo "__refresh_env" >> ~/"$target_file"
+
+  __append_sources "$ENV_HOME/config/mods"
+  __append_sources "$ENV_HOME/config/local/.default"
+
+  # load default function
+  if [ -f "$ENV_HOME/config/local/.default/function.zsh" ]; then
+    source "$ENV_HOME/config/local/.default/function.zsh"
+  fi
+
+  # run private_install if defined
+  if type private_install >/dev/null 2>&1; then
     echo "Executing default private installation"
     private_install
-    unset private_install
+    unset -f private_install 2>/dev/null
   fi
-  echo "export ENV_HOME="$ENV_HOME"" >> ~/$target_file
-  echo "export DEFAULT_ENV_HOME="$ENV_HOME/config/local/.default"" >> ~/$target_file
-  if [ ! -z $ENV_ALIAS ]; then
-    ls $ENV_HOME/config/local/$ENV_ALIAS/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$target_file
-    if [ -f $ENV_HOME/config/local/.default/addon.zsh ]; then
-      source $ENV_HOME/config/local/.default/addon.zsh
-      __addon_install $ENV_HOME/config/local/$ENV_ALIAS
+
+  echo "export ENV_HOME=\"$ENV_HOME\"" >> ~/"$target_file"
+  echo "export DEFAULT_ENV_HOME=\"$ENV_HOME/config/local/.default\"" >> ~/"$target_file"
+
+  if [ -n "$ENV_ALIAS" ]; then
+
+    __append_sources "$ENV_HOME/config/local/$ENV_ALIAS"
+
+    if [ -f "$ENV_HOME/config/local/.default/addon.zsh" ]; then
+      source "$ENV_HOME/config/local/.default/addon.zsh"
+      __addon_install "$ENV_HOME/config/local/$ENV_ALIAS"
     fi
-    echo "export ENV_ALIAS="$ENV_ALIAS"" >> ~/$target_file
-    echo "echo "You are using environment "$ENV_ALIAS" >> ~/$target_file
-    [ -f $ENV_HOME/config/local/$ENV_ALIAS/function.zsh ] && source $ENV_HOME/config/local/$ENV_ALIAS/function.zsh
-    [ -f $ENV_HOME/config/local/$ENV_ALIAS/_function.zsh ] && source $ENV_HOME/config/local/$ENV_ALIAS/_function.zsh
-    if type private_install > /dev/null 2>&1; then
+
+    echo "export ENV_ALIAS=\"$ENV_ALIAS\"" >> ~/"$target_file"
+    echo "echo \"You are using environment $ENV_ALIAS\"" >> ~/"$target_file"
+
+    [ -f "$ENV_HOME/config/local/$ENV_ALIAS/function.zsh" ] && \
+      source "$ENV_HOME/config/local/$ENV_ALIAS/function.zsh"
+
+    [ -f "$ENV_HOME/config/local/$ENV_ALIAS/_function.zsh" ] && \
+      source "$ENV_HOME/config/local/$ENV_ALIAS/_function.zsh"
+
+    if type private_install >/dev/null 2>&1; then
       echo "Executing private installation"
       private_install
-      unset private_install
+      unset -f private_install 2>/dev/null
     fi
-    echo "export SUBENV_HOME="$ENV_HOME/config/local/$ENV_ALIAS"" >> ~/$target_file
+
+    echo "export SUBENV_HOME=\"$ENV_HOME/config/local/$ENV_ALIAS\"" >> ~/"$target_file"
+
   else
-    echo "echo "You are using default environment"" >> ~/$target_file
+    echo "echo \"You are using default environment\"" >> ~/"$target_file"
   fi
 }
 
