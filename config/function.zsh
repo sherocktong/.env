@@ -38,8 +38,10 @@ __get_sh_runtime() {
 
 __refresh_env() {
   local home_dir="$ENV_HOME"
+  local general_home="$HOME"
   if [ -z "$home_dir" ]; then
-    return
+    echo "ERROR: ENV_HOME not found" >&2
+    return 1
   fi
   local keep_file="$home_dir/config/env.whitelist"
 
@@ -72,6 +74,7 @@ __refresh_env() {
   done < <(printenv | cut -d= -f1)
 
   export ENV_HOME="$home_dir"
+  export HOME="$general_home"
 }
 
 __refresh_alias() {
@@ -148,6 +151,7 @@ __env_install() {
   __append_sources "$ENV_HOME/config"
 
   echo "set -o vi" >> ~/"$target_file"
+  echo "export ENV_HOME=\"$ENV_HOME\"" >> ~/"$target_file"
   echo "__refresh_alias" >> ~/"$target_file"
   echo "__refresh_env" >> ~/"$target_file"
 
@@ -166,7 +170,6 @@ __env_install() {
     unset -f private_install 2>/dev/null
   fi
 
-  echo "export ENV_HOME=\"$ENV_HOME\"" >> ~/"$target_file"
   echo "export DEFAULT_ENV_HOME=\"$ENV_HOME/config/local/.default\"" >> ~/"$target_file"
 
   if [ -n "$ENV_ALIAS" ]; then

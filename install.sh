@@ -47,6 +47,4 @@ if [ -d $ENV_HOME/config/mods ]; then
 fi
 
 __env_install default
-source $ENV_HOME/config/function.zsh
-rezsh
-echo "✅Installed successfully"
+echo "✅Installed successfully, now run `__print_source_cmd` to activate the installation."
