@@ -128,6 +128,11 @@ __env_install() {
   target_file="$(__get_sh_config_file)"
   local ENV_ALIAS="$1"
 
+  precmd_env_name() {
+    local name="${ENV_ALIAS:-default}"
+    PROMPT="($name) ${PROMPT#(*) }"
+  }
+
   __append_sources() {
     setopt local_options nonomatch 2>/dev/null
     local dir="$1"
@@ -143,6 +148,8 @@ __env_install() {
   if [ -f ~/"$target_file".bak ]; then
     cp ~/"$target_file".bak ~/"$target_file"
   fi
+  # remove any leftover env echo from previous install
+  sed -i '' '/^echo "You are using/d' ~/"$target_file"
 
   # load existing config
   [ -f ~/"$target_file" ] && source ~/"$target_file"
@@ -171,6 +178,14 @@ __env_install() {
   fi
 
   echo "export DEFAULT_ENV_HOME=\"$ENV_HOME/config/local/.default\"" >> ~/"$target_file"
+
+  {
+    echo "precmd_env_name() {"
+    echo "  local name=\"\${ENV_ALIAS:-default}\""
+    echo "  PROMPT=\"(\$name) \${PROMPT#(*) }\""
+    echo "}"
+    echo "autoload -Uz add-zsh-hook && add-zsh-hook precmd precmd_env_name"
+  } >> ~/"$target_file"
 
   if [ -n "$ENV_ALIAS" ]; then
 
