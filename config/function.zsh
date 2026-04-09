@@ -113,6 +113,8 @@ __env_uninstall() {
   # rm -f ~/.env_snapshot
   __addon_uninstall
   source ~/$file_name
+  # remove all __envm_precmd registrations from the current shell
+  precmd_functions=("${(@)precmd_functions:#__envm_precmd}")
 }
 
 __addon_uninstall() {
@@ -128,9 +130,12 @@ __env_install() {
   target_file="$(__get_sh_config_file)"
   local ENV_ALIAS="$1"
 
-  precmd_env_name() {
+  __envm_precmd() {
     local name="${ENV_ALIAS:-default}"
-    PROMPT="($name) ${PROMPT#(*) }"
+    local new_prefix="($name) "
+    [[ -n "$__ENVM_PRECMD_PREFIX" ]] && PROMPT="${PROMPT//${__ENVM_PRECMD_PREFIX}/}"
+    PROMPT="${new_prefix}${PROMPT}"
+    __ENVM_PRECMD_PREFIX="$new_prefix"
   }
 
   __append_sources() {
@@ -180,11 +185,14 @@ __env_install() {
   echo "export DEFAULT_ENV_HOME=\"$ENV_HOME/config/local/.default\"" >> ~/"$target_file"
 
   {
-    echo "precmd_env_name() {"
+    echo "__envm_precmd() {"
     echo "  local name=\"\${ENV_ALIAS:-default}\""
-    echo "  PROMPT=\"(\$name) \${PROMPT#(*) }\""
+    echo "  local new_prefix=\"(\$name) \""
+    echo "  [[ -n \"\$__ENVM_PRECMD_PREFIX\" ]] && PROMPT=\"\${PROMPT//\${__ENVM_PRECMD_PREFIX}/}\""
+    echo "  PROMPT=\"\${new_prefix}\${PROMPT}\""
+    echo "  __ENVM_PRECMD_PREFIX=\"\$new_prefix\""
     echo "}"
-    echo "autoload -Uz add-zsh-hook && add-zsh-hook precmd precmd_env_name"
+    echo "autoload -Uz add-zsh-hook && add-zsh-hook precmd __envm_precmd"
   } >> ~/"$target_file"
 
   if [ -n "$ENV_ALIAS" ]; then
