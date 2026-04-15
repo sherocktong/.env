@@ -103,9 +103,7 @@ __env_uninstall() {
     private_uninstall
     unset private_uninstall
   fi
-  if [ -f ~/$file_name.bak ]; then
-    cp ~/$file_name.bak ~/$file_name
-  fi
+  sed -i '' '/^# >>> envm initialize >>>/,/^# <<< envm initialize <<</d' ~/$file_name 2>/dev/null
   touch ~/$file_name
   __refresh_alias
   # rm -f ~/.alias_snapshot
@@ -149,15 +147,13 @@ __env_install() {
     done
   }
 
-  # restore backup if exists
-  if [ -f ~/"$target_file".bak ]; then
-    cp ~/"$target_file".bak ~/"$target_file"
-  fi
   # remove any leftover env echo from previous install
   sed -i '' '/^echo "You are using/d' ~/"$target_file"
 
   # load existing config
   [ -f ~/"$target_file" ] && source ~/"$target_file"
+
+  echo "# >>> envm initialize >>>" >> ~/"$target_file"
 
   # base configs
   __append_sources "$ENV_HOME/config"
@@ -224,6 +220,8 @@ __env_install() {
   else
     echo "echo \"You are using default environment\"" >> ~/"$target_file"
   fi
+
+  echo "# <<< envm initialize <<<" >> ~/"$target_file"
 }
 
 envm() {
