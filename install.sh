@@ -1,9 +1,5 @@
 #!/bin/bash
 
-function __backup() {
-  cp ~/$1 ~/$1.bak
-}
-
 function __print_source_cmd() {
   local runtime=$(__get_sh_runtime)
   if [ $runtime = "ZSH" ]; then
@@ -37,8 +33,13 @@ if [ ! -d $LOCATION/config/local/_put_alias_here/ ]; then
   mkdir -p $LOCATION/config/local/_put_alias_here/
 fi
 __print_sh_runtime
-__backup $(__get_sh_config_file)
+
+if [ -d $ENV_HOME/config/mods ]; then
+  for f in "$ENV_HOME/config/mods/"*.zsh; do
+    [[ -e "$f" ]] || continue
+    source "$f"
+  done
+fi
+
 __env_install default
-source $ENV_HOME/config/function.zsh
-rezsh
-echo "✅Installed successfully"
+echo "✅Installed successfully, now run `__print_source_cmd` to activate the installation."

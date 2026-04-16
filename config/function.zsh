@@ -37,11 +37,44 @@ __get_sh_runtime() {
 }
 
 __refresh_env() {
-  local home_dir=$ENV_HOME
-  for var in $(printenv | cut -d= -f1 | grep -v -E '^(PATH|HOME|SHELL|USER|LOGNAME|TERM|PWD)$'); do
-		unset "$var"
-	done
-  export ENV_HOME=$home_dir
+  local home_dir="$ENV_HOME"
+  local general_home="$HOME"
+  if [ -z "$home_dir" ]; then
+    echo "ERROR: ENV_HOME not found" >&2
+    return 1
+  fi
+  local keep_file="$home_dir/config/env.whitelist"
+
+  if [[ ! -f "$keep_file" ]]; then
+    echo "Error: Env whitelist file not found: $keep_file. Please run \`cp $keep_file.template $keep_file\` to create one" >&2
+    return 1
+  fi
+
+  local var allowed keep
+
+  while IFS= read -r var; do
+    if [[ "$var" == T_* ]]; then
+      unset "$var"
+      continue
+    fi
+
+    keep=0
+
+    while IFS= read -r allowed; do
+      [[ -z "$allowed" || "$allowed" == \#* ]] && continue
+
+      if [[ "$var" == *"$allowed"* ]]; then
+        keep=1
+        break
+      fi
+    done < "$keep_file"
+
+    [[ "$keep" -eq 0 ]] && unset "$var"
+
+  done < <(printenv | cut -d= -f1)
+
+  export ENV_HOME="$home_dir"
+  export HOME="$general_home"
 }
 
 __refresh_alias() {
@@ -70,9 +103,7 @@ __env_uninstall() {
     private_uninstall
     unset private_uninstall
   fi
-  if [ -f ~/$file_name.bak ]; then
-    cp ~/$file_name.bak ~/$file_name
-  fi
+  sed -i '' '/^# >>> envm initialize >>>/,/^# <<< envm initialize <<</d' ~/$file_name 2>/dev/null
   touch ~/$file_name
   __refresh_alias
   # rm -f ~/.alias_snapshot
@@ -80,6 +111,8 @@ __env_uninstall() {
   # rm -f ~/.env_snapshot
   __addon_uninstall
   source ~/$file_name
+  # remove all __envm_precmd registrations from the current shell
+  precmd_functions=("${(@)precmd_functions:#__envm_precmd}")
 }
 
 __addon_uninstall() {
@@ -91,46 +124,104 @@ __addon_install() {
 }
 
 __env_install() {
-  local target_file="$(__get_sh_config_file)"
-  
-  ENV_ALIAS=$1
-  if [ -f ~/$target_file.bak ]; then
-    cp ~/$target_file.bak ~/$target_file
+  local target_file
+  target_file="$(__get_sh_config_file)"
+  local ENV_ALIAS="$1"
+
+  __envm_precmd() {
+    local name="${ENV_ALIAS:-default}"
+    local new_prefix="($name) "
+    [[ -n "$__ENVM_PRECMD_PREFIX" ]] && PROMPT="${PROMPT//${__ENVM_PRECMD_PREFIX}/}"
+    PROMPT="${new_prefix}${PROMPT}"
+    __ENVM_PRECMD_PREFIX="$new_prefix"
+  }
+
+  __append_sources() {
+    setopt local_options nonomatch 2>/dev/null
+    local dir="$1"
+    [ -d "$dir" ] || return
+
+    for f in "$dir"/*.zsh; do
+      [ -e "$f" ] || continue
+      echo "[ -f \"$f\" ] && source \"$f\"" >> ~/"$target_file"
+    done
+  }
+
+  # remove any leftover env echo from previous install
+  sed -i '' '/^echo "You are using/d' ~/"$target_file"
+
+  # load existing config
+  [ -f ~/"$target_file" ] && source ~/"$target_file"
+
+  echo "# >>> envm initialize >>>" >> ~/"$target_file"
+
+  # base configs
+  __append_sources "$ENV_HOME/config"
+
+  echo "set -o vi" >> ~/"$target_file"
+  echo "export ENV_HOME=\"$ENV_HOME\"" >> ~/"$target_file"
+  echo "__refresh_alias" >> ~/"$target_file"
+  echo "__refresh_env" >> ~/"$target_file"
+
+  __append_sources "$ENV_HOME/config/mods"
+  __append_sources "$ENV_HOME/config/local/.default"
+
+  # load default function
+  if [ -f "$ENV_HOME/config/local/.default/function.zsh" ]; then
+    source "$ENV_HOME/config/local/.default/function.zsh"
   fi
-  source ~/$target_file
-  ls $ENV_HOME/config/*.* | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$target_file
-  echo "set -o vi" >> ~/$target_file
-  echo "__refresh_alias" >> ~/$target_file
-  echo "__refresh_env" >> ~/$target_file
-  ls $ENV_HOME/config/mods/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$target_file
-  ls $ENV_HOME/config/local/.default/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$target_file
-  [ -f $ENV_HOME/config/local/.default/function.zsh ] && source $ENV_HOME/config/local/.default/function.zsh
-  if type private_install > /dev/null 2>&1; then
+
+  # run private_install if defined
+  if type private_install >/dev/null 2>&1; then
     echo "Executing default private installation"
     private_install
-    unset private_install
+    unset -f private_install 2>/dev/null
   fi
-  echo "export ENV_HOME="$ENV_HOME"" >> ~/$target_file
-  echo "export DEFAULT_ENV_HOME="$ENV_HOME/config/local/.default"" >> ~/$target_file
-  if [ ! -z $ENV_ALIAS ]; then
-    ls $ENV_HOME/config/local/$ENV_ALIAS/*.zsh 2>/dev/null | xargs -I {} echo "[ -f {} ] && source {}" >> ~/$target_file
-    if [ -f $ENV_HOME/config/local/.default/addon.zsh ]; then
-      source $ENV_HOME/config/local/.default/addon.zsh
-      __addon_install $ENV_HOME/config/local/$ENV_ALIAS
+
+  echo "export DEFAULT_ENV_HOME=\"$ENV_HOME/config/local/.default\"" >> ~/"$target_file"
+
+  {
+    echo "__envm_precmd() {"
+    echo "  local name=\"\${ENV_ALIAS:-default}\""
+    echo "  local new_prefix=\"(\$name) \""
+    echo "  [[ -n \"\$__ENVM_PRECMD_PREFIX\" ]] && PROMPT=\"\${PROMPT//\${__ENVM_PRECMD_PREFIX}/}\""
+    echo "  PROMPT=\"\${new_prefix}\${PROMPT}\""
+    echo "  __ENVM_PRECMD_PREFIX=\"\$new_prefix\""
+    echo "}"
+    echo "autoload -Uz add-zsh-hook && add-zsh-hook precmd __envm_precmd"
+  } >> ~/"$target_file"
+
+  if [ -n "$ENV_ALIAS" ]; then
+
+    __append_sources "$ENV_HOME/config/local/$ENV_ALIAS"
+
+    if [ -f "$ENV_HOME/config/local/.default/addon.zsh" ]; then
+      source "$ENV_HOME/config/local/.default/addon.zsh"
+      __addon_install "$ENV_HOME/config/local/$ENV_ALIAS"
     fi
-    echo "export ENV_ALIAS="$ENV_ALIAS"" >> ~/$target_file
-    echo "echo "You are using environment "$ENV_ALIAS" >> ~/$target_file
-    [ -f $ENV_HOME/config/local/$ENV_ALIAS/function.zsh ] && source $ENV_HOME/config/local/$ENV_ALIAS/function.zsh
-    [ -f $ENV_HOME/config/local/$ENV_ALIAS/_function.zsh ] && source $ENV_HOME/config/local/$ENV_ALIAS/_function.zsh
-    if type private_install > /dev/null 2>&1; then
+
+    echo "export ENV_ALIAS=\"$ENV_ALIAS\"" >> ~/"$target_file"
+    echo "echo \"You are using environment $ENV_ALIAS\"" >> ~/"$target_file"
+
+    [ -f "$ENV_HOME/config/local/$ENV_ALIAS/function.zsh" ] && \
+      source "$ENV_HOME/config/local/$ENV_ALIAS/function.zsh"
+
+    [ -f "$ENV_HOME/config/local/$ENV_ALIAS/_function.zsh" ] && \
+      source "$ENV_HOME/config/local/$ENV_ALIAS/_function.zsh"
+
+    if type private_install >/dev/null 2>&1; then
       echo "Executing private installation"
       private_install
-      unset private_install
+      unset -f private_install 2>/dev/null
     fi
-    echo "export SUBENV_HOME="$ENV_HOME/config/local/$ENV_ALIAS"" >> ~/$target_file
+
+    echo "export SUBENV_HOME=\"$ENV_HOME/config/local/$ENV_ALIAS\"" >> ~/"$target_file"
+
   else
-    echo "echo "You are using default environment"" >> ~/$target_file
+    echo "echo \"You are using default environment\"" >> ~/"$target_file"
   fi
+
+  echo "# <<< envm initialize <<<" >> ~/"$target_file"
 }
 
 envm() {
@@ -156,7 +247,8 @@ envm() {
       fi
     fi
     if [ -d $ENV_HOME/config/mods ]; then
-      for f in "$ENV_HOME/config/mods/"*.zsh(N); do
+      for f in "$ENV_HOME/config/mods/"*.zsh; do
+        [[ -e "$f" ]] || continue
         source "$f"
       done
     fi
@@ -260,12 +352,15 @@ ghx() {
     done < $workspace/.ghrc
   elif [ "clean" = "$1" ]; then
     local delete_flag=0
+    local global_ignore
+    global_ignore=$(git config --global --path core.excludesfile 2>/dev/null)
     ls -1 $workspace | while read -r line; do
-      if [ 0 -eq $(grep -c $line $workspace/.ghrc) ]; then
+      delete_flag=0
+      if [ 0 -eq $(grep -c "$line" $workspace/.ghrc) ]; then
         delete_flag=1
       else
-        local existing=$(grep $line $workspace/.ghrc | cut -d '/' -f 2)
-        echo $existing | while read -r existing_line; do
+        local existing=$(grep "$line" $workspace/.ghrc | cut -d '/' -f 2)
+        echo "$existing" | while read -r existing_line; do
           if [ "$existing_line" = "$line" ]; then
             delete_flag=0
             break
@@ -274,9 +369,17 @@ ghx() {
           fi
         done
       fi
+      if [ "$delete_flag" -eq 1 ] && [ -f "$global_ignore" ]; then
+        while IFS= read -r pattern; do
+          [[ -z "$pattern" || "$pattern" == \#* ]] && continue
+          case "$line" in
+            $pattern) delete_flag=0; break ;;
+          esac
+        done < "$global_ignore"
+      fi
       if [ 1 -eq $delete_flag ]; then
         echo "Removing repository $line..."
-        rm -rf $workspace/$line
+        rm -rf "$workspace/$line"
       fi
     done 
   else
