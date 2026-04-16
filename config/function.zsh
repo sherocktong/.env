@@ -352,12 +352,15 @@ ghx() {
     done < $workspace/.ghrc
   elif [ "clean" = "$1" ]; then
     local delete_flag=0
+    local global_ignore
+    global_ignore=$(git config --global --path core.excludesfile 2>/dev/null)
     ls -1 $workspace | while read -r line; do
-      if [ 0 -eq $(grep -c $line $workspace/.ghrc) ]; then
+      delete_flag=0
+      if [ 0 -eq $(grep -c "$line" $workspace/.ghrc) ]; then
         delete_flag=1
       else
-        local existing=$(grep $line $workspace/.ghrc | cut -d '/' -f 2)
-        echo $existing | while read -r existing_line; do
+        local existing=$(grep "$line" $workspace/.ghrc | cut -d '/' -f 2)
+        echo "$existing" | while read -r existing_line; do
           if [ "$existing_line" = "$line" ]; then
             delete_flag=0
             break
@@ -366,9 +369,17 @@ ghx() {
           fi
         done
       fi
+      if [ "$delete_flag" -eq 1 ] && [ -f "$global_ignore" ]; then
+        while IFS= read -r pattern; do
+          [[ -z "$pattern" || "$pattern" == \#* ]] && continue
+          case "$line" in
+            $pattern) delete_flag=0; break ;;
+          esac
+        done < "$global_ignore"
+      fi
       if [ 1 -eq $delete_flag ]; then
         echo "Removing repository $line..."
-        rm -rf $workspace/$line
+        rm -rf "$workspace/$line"
       fi
     done 
   else
