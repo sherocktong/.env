@@ -301,6 +301,16 @@ hint() {
 ghx() {
   local workspace=""
   local url="https://github.com/"
+  local dry_run=0
+  local cmd=""
+
+  for arg in "$@"; do
+    if [ "$arg" = "-d" ]; then
+      dry_run=1
+    elif [ -z "$cmd" ]; then
+      cmd="$arg"
+    fi
+  done
 
   if [ ! -z $GHX_DISABLED ] && [[ 1 -eq $GHX_DISABLED ]]; then
     echo "GHX is disabled"
@@ -309,13 +319,13 @@ ghx() {
   if [ ! -z $GHX_URL ]; then
     url=$GHX_URL
   fi
-  if [ -z $ENV_ALIAS ]; then 
+  if [ -z $ENV_ALIAS ]; then
     if [ -z $X ]; then
       echo "Please set environment variable X to use this function"
       return 1
     else
       workspace=$X
-    fi 
+    fi
   else
     if [ -z $WORKSPACE ]; then
       echo "Please set environment variable WORKSPACE to use this function"
@@ -323,12 +333,12 @@ ghx() {
     else
       workspace=$WORKSPACE
     fi
-  fi 
+  fi
   if [ ! -f $workspace/.ghrc ]; then
     echo "Please create a .ghrc file under the root directory of workspace"
     return 1
   fi
-  if [ "install" = "$1" ]; then
+  if [ "install" = "$cmd" ]; then
     while IFS='/' read -r user repo; do
     local install_flag=0
       if [ 0 -eq $(ls -1 $workspace | grep -c $repo) ]; then
@@ -345,12 +355,16 @@ ghx() {
         done
       fi
       if [ 1 -eq $install_flag ]; then
-        cd $workspace
-        git clone $url$user/$repo.git
-        cd - > /dev/null 2>&1
+        if [ 1 -eq $dry_run ]; then
+          echo "[dry-run] Would clone $url$user/$repo.git"
+        else
+          cd $workspace
+          git clone $url$user/$repo.git
+          cd - > /dev/null 2>&1
+        fi
       fi
     done < $workspace/.ghrc
-  elif [ "clean" = "$1" ]; then
+  elif [ "clean" = "$cmd" ]; then
     local delete_flag=0
     local global_ignore
     global_ignore=$(git config --global --path core.excludesfile 2>/dev/null)
@@ -378,11 +392,69 @@ ghx() {
         done < "$global_ignore"
       fi
       if [ 1 -eq $delete_flag ]; then
-        echo "Removing repository $line..."
-        rm -rf "$workspace/$line"
+        if [ 1 -eq $dry_run ]; then
+          echo "[dry-run] Would remove repository $line..."
+        else
+          echo "Removing repository $line..."
+          rm -rf "$workspace/$line"
+        fi
       fi
-    done 
+    done
+  elif [ "add" = "$cmd" ]; then
+    if [ ! -d .git ]; then
+      echo "Current directory is not a git repository"
+      return 1
+    fi
+    local remote_url
+    remote_url=$(git remote get-url origin 2>/dev/null)
+    if [ -z "$remote_url" ]; then
+      echo "No origin remote found in current git repository"
+      return 1
+    fi
+    local user repo
+    local clean_url="${remote_url%.git}"
+    if [[ "$remote_url" == https://* ]] || [[ "$remote_url" == http://* ]]; then
+      user=$(echo "$clean_url" | sed -E 's|https?://[^/]+/([^/]+)/([^/]+)/?$|\1|')
+      repo=$(echo "$clean_url" | sed -E 's|https?://[^/]+/([^/]+)/([^/]+)/?$|\2|')
+    elif [[ "$remote_url" == git@* ]]; then
+      user=$(echo "$clean_url" | sed -E 's|^git@[^:]+:([^/]+)/([^/]+)/?$|\1|')
+      repo=$(echo "$clean_url" | sed -E 's|^git@[^:]+:([^/]+)/([^/]+)/?$|\2|')
+    else
+      echo "Unsupported remote URL format: $remote_url"
+      return 1
+    fi
+    if [ -z "$user" ] || [ -z "$repo" ]; then
+      echo "Could not parse user/repo from remote URL: $remote_url"
+      return 1
+    fi
+    local entry="$user/$repo"
+    if grep -qx "$entry" "$workspace/.ghrc"; then
+      echo "Entry $entry already exists in $workspace/.ghrc"
+      return 0
+    fi
+    if [ 1 -eq $dry_run ]; then
+      echo "[dry-run] Would add $entry to $workspace/.ghrc"
+    else
+      echo "$entry" >> "$workspace/.ghrc"
+      echo "Added $entry to $workspace/.ghrc"
+    fi
+  elif [ "push" = "$cmd" ]; then
+    while IFS='/' read -r user repo; do
+      local repo_path="$workspace/$repo"
+      if [ ! -d "$repo_path/.git" ]; then
+        echo "Skipping $user/$repo: not a git repository"
+        continue
+      fi
+      if [ 1 -eq $dry_run ]; then
+        echo "[dry-run] Would push $user/$repo"
+      else
+        echo "Pushing $user/$repo..."
+        cd "$repo_path"
+        git push
+        cd - > /dev/null 2>&1
+      fi
+    done < "$workspace/.ghrc"
   else
-    echo "Only install and clean are available commands"
-  fi 
+    echo "Only install, clean, add and push are available commands"
+  fi
 }
